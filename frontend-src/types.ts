@@ -47,14 +47,22 @@ export type Project = {
   status: string;
 };
 
-export type CollectorSettings = {
-  provider: CollectorProvider | string;
+export type CollectorSettingsInput = {
+  provider: CollectorProvider;
   hunterApiBaseUrl: string;
   fofaApiBaseUrl: string;
   hunterSkillPath: string;
   fofaSkillPath: string;
-  resolvedHunterSkillPath?: string;
-  resolvedFofaSkillPath?: string;
+};
+
+export type CollectorSettings = {
+  provider: CollectorProvider;
+  hunterApiBaseUrl: string;
+  fofaApiBaseUrl: string;
+  hunterSkillPath: string;
+  fofaSkillPath: string;
+  resolvedHunterSkillPath: string;
+  resolvedFofaSkillPath: string;
   hunterApiKeyConfigured: boolean;
   fofaApiKeyConfigured: boolean;
   tianyanApiKeyConfigured: boolean;

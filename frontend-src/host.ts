@@ -4,6 +4,7 @@ import type {
   CollectionRun,
   CollectorProvider,
   CollectorSettings,
+  CollectorSettingsInput,
   ExecutionDefaults,
   ExecutionLine,
   ExecutionLogPage,
@@ -117,19 +118,57 @@ function createAssetApi(host: PluginHost) {
   };
 }
 
+/** Validate the complete runtime view before exposing it to any plugin consumer. */
+export function parseCollectorSettings(value: unknown): CollectorSettings {
+  const view = asRecord<Record<string, unknown>>(value);
+  if (view.provider !== "hunter" && view.provider !== "fofa") throw new Error("资产收集数据源响应无效");
+  const text = (key: string): string => {
+    const result = view[key];
+    if (typeof result !== "string") throw new Error(`资产收集设置响应字段 ${key} 无效`);
+    return result;
+  };
+  const configured = (key: string): boolean => {
+    const result = view[key];
+    if (typeof result !== "boolean") throw new Error(`资产收集设置响应字段 ${key} 无效`);
+    return result;
+  };
+  return {
+    provider: view.provider,
+    hunterApiBaseUrl: text("hunterApiBaseUrl"),
+    fofaApiBaseUrl: text("fofaApiBaseUrl"),
+    hunterSkillPath: text("hunterSkillPath"),
+    fofaSkillPath: text("fofaSkillPath"),
+    resolvedHunterSkillPath: text("resolvedHunterSkillPath"),
+    resolvedFofaSkillPath: text("resolvedFofaSkillPath"),
+    hunterApiKeyConfigured: configured("hunterApiKeyConfigured"),
+    fofaApiKeyConfigured: configured("fofaApiKeyConfigured"),
+    tianyanApiKeyConfigured: configured("tianyanApiKeyConfigured"),
+  };
+}
+
+function settingsInput(input: CollectorSettingsInput): CollectorSettingsInput {
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("资产收集设置输入无效");
+  const fields = ["provider", "hunterApiBaseUrl", "fofaApiBaseUrl", "hunterSkillPath", "fofaSkillPath"];
+  if (Object.keys(input).length !== fields.length || Object.keys(input).some(key => !fields.includes(key)) ||
+    (input.provider !== "hunter" && input.provider !== "fofa") || fields.some(key => typeof input[key as keyof CollectorSettingsInput] !== "string")) {
+    throw new Error("资产收集设置输入无效");
+  }
+  return { provider: input.provider, hunterApiBaseUrl: input.hunterApiBaseUrl, fofaApiBaseUrl: input.fofaApiBaseUrl, hunterSkillPath: input.hunterSkillPath, fofaSkillPath: input.fofaSkillPath };
+}
+
 function createSettingsApi(host: PluginHost) {
   return {
     async settings(): Promise<CollectorSettings> {
-      return asRecord<CollectorSettings>(await host.request("xsec.asset-discovery.settings.get", {}));
+      return parseCollectorSettings(await host.request("xsec.asset-discovery.settings.get", {}));
     },
-    async saveSettings(input: Omit<CollectorSettings, "hunterApiKeyConfigured" | "fofaApiKeyConfigured" | "tianyanApiKeyConfigured">) {
-      return asRecord<CollectorSettings>(await host.request("xsec.asset-discovery.settings.set", input));
+    async saveSettings(input: CollectorSettingsInput): Promise<CollectorSettings> {
+      return parseCollectorSettings(await host.request("xsec.asset-discovery.settings.set", settingsInput(input)));
     },
-    async saveCredential(kind: CredentialKind, value: string) {
-      return host.request("xsec.asset-discovery.credentials.set", { kind, value });
+    async saveCredential(kind: CredentialKind, value: string): Promise<CollectorSettings> {
+      return parseCollectorSettings(await host.request("xsec.asset-discovery.credentials.set", { kind, value }));
     },
-    async clearCredential(kind: CredentialKind) {
-      return host.request("xsec.asset-discovery.credentials.clear", { kind });
+    async clearCredential(kind: CredentialKind): Promise<CollectorSettings> {
+      return parseCollectorSettings(await host.request("xsec.asset-discovery.credentials.clear", { kind }));
     },
     async openSettings() {
       return host.request("xsec.plugin.settings.open", {});
