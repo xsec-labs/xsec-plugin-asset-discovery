@@ -6,7 +6,7 @@ import { approvalModeLabel, collectionMetrics, fofaScopeRequiresTianyan, normali
 import { AssetPool } from "./asset-pool";
 import { useDashboardState } from "./dashboard-state";
 import { RunsPanel } from "./runs-panel";
-import { Button, Modal, Notice, Select } from "./ui";
+import { Button, Modal, Notice, PlusIcon, RefreshIcon, Select } from "./ui";
 
 type DashboardProps = { api: AssetDiscoveryApi; host: PluginHost };
 type DashboardTab = "runs" | "assets";
@@ -30,16 +30,17 @@ function providerConfigured(settings: CollectorSettings, provider: CollectorProv
     && (!fofaScopeRequiresTianyan(prompt) || settings.tianyanApiKeyConfigured);
 }
 
-function DashboardHeader({ onOpenCollect, onRefresh }: { onOpenCollect: () => void; onRefresh: () => void }) {
+type Metrics = ReturnType<typeof collectionMetrics>;
+
+function DashboardHeader({ metrics, onOpenCollect, onRefresh }: { metrics: Metrics; onOpenCollect: () => void; onRefresh: () => void }) {
   return <header className="ad-header">
-    <div>
-      <p className="ad-eyebrow">ASSET DISCOVERY CONSOLE</p>
+    <div className="ad-header-copy">
       <h1 className="ad-title">资产发现</h1>
-      <p className="ad-description">管理资产收集任务、执行过程和跨项目资产池。</p>
+      <div className="ad-kpis"><span className={metrics.running ? "live" : ""}>运行 <strong>{metrics.running}</strong></span><span>完成 <strong>{metrics.completed}</strong></span><span className={metrics.failed ? "failed" : ""}>失败 <strong>{metrics.failed}</strong></span><span>资产 <strong>{metrics.assets}</strong></span></div>
     </div>
     <div className="ad-actions">
-      <Button className="primary" onClick={onOpenCollect}>启动资产收集</Button>
-      <Button onClick={onRefresh}>刷新</Button>
+      <Button onClick={onRefresh}><RefreshIcon />刷新</Button>
+      <Button className="primary" onClick={onOpenCollect}><PlusIcon />启动资产收集</Button>
     </div>
   </header>;
 }
@@ -75,9 +76,8 @@ export function AssetDiscoveryApp({ api }: DashboardProps) {
   }, [assetRunId, dashboard.runs]);
 
   return <main className="ad-app" data-color-mode={colorMode}>
-    <DashboardHeader onOpenCollect={() => setCollectOpen(true)} onRefresh={() => void dashboard.refresh()} />
-    {notice ? <p className="ad-muted">{notice}</p> : null}
-    <div className="ad-kpis"><span>运行 <strong>{metrics.running}</strong></span><span>完成 <strong>{metrics.completed}</strong></span><span>失败 <strong>{metrics.failed}</strong></span><span>资产 <strong>{metrics.assets}</strong></span></div>
+    <DashboardHeader metrics={metrics} onOpenCollect={() => setCollectOpen(true)} onRefresh={() => void dashboard.refresh()} />
+    {notice ? <p className="ad-toast" role="status">{notice}</p> : null}
     <Tabs label="资产发现页面" value={tab} onValueChange={value => { if (value !== "runs" && value !== "assets") throw new Error("Invalid asset discovery tab"); setTab(value); }} items={[
       { value: "runs", label: `收集操作台${metrics.running ? ` · ${metrics.running}` : ""}`, content: <RunsPanel api={api} runs={dashboard.runs} loading={dashboard.runsLoading} error={dashboard.runsError} selectedRunId={selectedRunId} filter={filter} query={query} onSelect={setSelectedRunId} onDeleted={(runId) => { dashboard.removeRun(runId); setSelectedRunId(undefined); }} onFilter={setFilter} onQuery={setQuery} onRefresh={async () => { await dashboard.loadRuns(true); }} onStart={() => setCollectOpen(true)} onOpenAssets={openAssets} onOpenSettings={openSettings} /> },
       { value: "assets", label: `资产池 · ${metrics.assets}`, content: <AssetPool api={api} runs={dashboard.runs} selectedRunId={assetRunId} onSelectedRunId={setAssetRunId} /> },
@@ -146,7 +146,7 @@ function CollectModal({ settings, settingsReady, settingsError, defaults, defaul
   };
   return <Modal title="启动资产收集" busy={saving} onClose={close} footer={<><Button disabled={saving} onClick={close}>取消</Button><Button className="primary" loading={saving} disabled={settingsUnavailable || configurationIncomplete || !defaultsReady || !defaults} onClick={() => void start()}>启动</Button></>}>
     <CollectFields provider={provider} prompt={prompt} name={name} workdir={workdir} saving={saving} onProvider={(value) => { setProviderTouched(true); setProvider(value); }} onPrompt={setPrompt} onName={setName} onWorkdir={setWorkdir} />
-    <p className="ad-muted">访问模式：{defaultsReady && defaults ? `继承批量默认：${approvalModeLabel(defaults.approval_mode)}` : defaultsError ? "任务默认设置不可用" : "正在读取任务默认设置…"}</p>
+    <p className="ad-muted ad-form-note">访问模式：{defaultsReady && defaults ? `继承批量默认：${approvalModeLabel(defaults.approval_mode)}` : defaultsError ? "任务默认设置不可用" : "正在读取任务默认设置…"}</p>
     {configurationIncomplete ? <Notice action={<Button className="compact" disabled={saving} onClick={() => void openSettings()}>前往插件设置</Button>}>当前数据源配置不完整，无法启动收集任务。</Notice> : null}
     {settingsError ? <p className="ad-field-error">{settingsError}</p> : null}{defaultsError ? <p className="ad-field-error">{defaultsError}</p> : null}{error ? <p className="ad-field-error">{error}</p> : null}
   </Modal>;

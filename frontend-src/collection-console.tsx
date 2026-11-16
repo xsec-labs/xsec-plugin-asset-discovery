@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AssetDiscoveryApi } from "./host";
 import type { CollectionRun, ExecutionLogPage, ExecutionSnapshot } from "./types";
 import { approvalModeLabel, collectionBucket, collectionResultDescription, formatDuration, formatTime, providerLabel, runTitle } from "./utils";
-import { ConfirmModal, Button, EmptyState, ErrorState, Notice, Section, StatusBadge } from "./ui";
+import { ConfirmModal, Button, EmptyState, ErrorState, Notice, RefreshIcon, Section, StageMark, StatusBadge } from "./ui";
 import { ExecutionProcess } from "./execution-process";
 
 const LIVE_REFRESH_INTERVAL_MS = 4_000;
@@ -46,12 +46,12 @@ function Logs({ page, error, onMore, onRefresh }: { page?: ExecutionLogPage; err
 }
 
 function TaskDetails({ run }: { run: CollectionRun }) {
-  return <Section title="任务信息"><dl className="ad-inspector"><dt>任务 ID</dt><dd title={run.id}>{run.id}</dd><dt>数据源</dt><dd>{providerLabel(run.provider)}</dd><dt>状态</dt><dd><StatusBadge status={run.status} /></dd><dt>资产数</dt><dd>{run.total}</dd><dt>创建时间</dt><dd>{formatTime(run.created_at)}</dd><dt>更新时间</dt><dd>{formatTime(run.updated_at)}</dd><dt>完成时间</dt><dd>{formatTime(run.finished_at)}</dd><dt>耗时</dt><dd>{formatDuration(run.created_at, run.finished_at)}</dd><dt>访问模式</dt><dd>继承批量默认：{approvalModeLabel(run.approval_mode)}</dd>{run.terminal_reason ? <><dt>结算原因</dt><dd>{run.terminal_reason}</dd></> : null}{run.session_id ? <><dt>会话 ID</dt><dd>{run.session_id}</dd></> : null}</dl></Section>;
+  return <Section title="任务信息"><dl className="ad-inspector"><dt>任务 ID</dt><dd className="mono" title={run.id}>{run.id}</dd><dt>数据源</dt><dd>{providerLabel(run.provider)}</dd><dt>状态</dt><dd><StatusBadge status={run.status} /></dd><dt>资产数</dt><dd>{run.total}</dd><dt>创建时间</dt><dd>{formatTime(run.created_at)}</dd><dt>更新时间</dt><dd>{formatTime(run.updated_at)}</dd><dt>完成时间</dt><dd>{formatTime(run.finished_at)}</dd><dt>耗时</dt><dd>{formatDuration(run.created_at, run.finished_at)}</dd><dt>访问模式</dt><dd>继承批量默认：{approvalModeLabel(run.approval_mode)}</dd>{run.terminal_reason ? <><dt>结算原因</dt><dd>{run.terminal_reason}</dd></> : null}{run.session_id ? <><dt>会话 ID</dt><dd className="mono">{run.session_id}</dd></> : null}</dl></Section>;
 }
 
 function ConsoleHeader({ run, mutating, onStop, onOpenAssets, onRefresh, onDelete }: { run: CollectionRun; mutating: boolean; onStop: () => void; onOpenAssets: () => void; onRefresh: () => void; onDelete: () => void }) {
   const running = collectionBucket(run.status) === "running";
-  return <header className="ad-console-header"><div><div className="ad-run-card-title"><h2>{runTitle(run)}</h2><StatusBadge status={run.status} /></div><p className="ad-description">{providerLabel(run.provider)} · {run.total} 条资产 · {formatDuration(run.created_at, run.finished_at)}</p></div><div className="ad-actions">{running ? <Button className="danger" disabled={mutating} onClick={onStop}>停止收集</Button> : null}<Button className="primary" onClick={onOpenAssets}>查看资产{run.total ? `（${run.total}）` : ""}</Button><Button onClick={onRefresh}>刷新</Button><Button className="danger" disabled={mutating} onClick={onDelete}>删除</Button></div></header>;
+  return <header className="ad-console-header"><div><div className="ad-run-card-title"><h2>{runTitle(run)}</h2><StatusBadge status={run.status} /></div><p className="ad-description">{providerLabel(run.provider)} · {run.total} 条资产 · {formatDuration(run.created_at, run.finished_at)}</p></div><div className="ad-actions">{running ? <Button className="danger" disabled={mutating} onClick={onStop}>停止收集</Button> : null}<Button onClick={onOpenAssets}>查看资产{run.total ? `（${run.total}）` : ""}</Button><Button size="icon" aria-label="刷新任务详情" title="刷新任务详情" onClick={onRefresh}><RefreshIcon /></Button><Button className="danger" disabled={mutating} onClick={onDelete}>删除</Button></div></header>;
 }
 
 function logLineKey(line: ExecutionLogPage["lines"][number]) {
@@ -252,9 +252,9 @@ export function CollectionConsole({ api, run, onChanged, onDeleted, onOpenAssets
   return <section className="ad-console"><ConsoleHeader run={run} mutating={mutating} onStop={() => void stop()} onOpenAssets={() => onOpenAssets(run.id)} onRefresh={() => void content.refreshDetails()} onDelete={() => setDeleteOpen(true)} /><div className="ad-console-body">
     {actionError ? <p className="ad-field-error">{actionError}</p> : null}
     {failure ? <Notice action={run.failure_code === "missing_configuration" ? <Button className="compact" onClick={() => void onOpenSettings()}>打开资产发现设置</Button> : undefined}>{failure}</Notice> : null}
-    <div className="ad-flow">{stages.map((stage) => <article className={`ad-flow-card ${stage.state}`} key={stage.title}><strong>{stage.title}</strong><small>{stage.text}</small></article>)}</div>
-    <Section title="实时执行过程" actions={<span className="ad-muted">{running ? "实时更新" : "执行记录"}</span>}><ExecutionProcess execution={content.execution} loading={content.executionLoading} error={content.executionError} live={running} onRefresh={() => void content.refreshDetails()} /></Section>
-    <div className="ad-split"><Section title="授权收集范围"><pre className="ad-code">{run.scope_prompt || "未填写范围"}</pre></Section><Section title="进程日志" actions={<Button className="text compact" onClick={() => void content.refreshDetails()}>重新拉取</Button>}><Logs page={content.logs} error={content.logsError} onRefresh={() => void content.refreshDetails()} onMore={() => { const cursor = content.logs?.next_cursor; if (cursor) void content.loadMoreLogs(cursor); }} /></Section></div>
+    <div className="ad-flow">{stages.map((stage) => <article className={`ad-flow-card ${stage.state}`} key={stage.title}><StageMark state={stage.state} /><strong>{stage.title}</strong><small>{stage.text}</small></article>)}</div>
+    <Section title="实时执行过程" actions={running ? <span className="ad-live">实时更新</span> : undefined}><ExecutionProcess execution={content.execution} loading={content.executionLoading} error={content.executionError} live={running} onRefresh={() => void content.refreshDetails()} /></Section>
+    <div className="ad-split"><Section title="授权收集范围"><pre className="ad-code ad-scope">{run.scope_prompt || "未填写范围"}</pre></Section><Section title="进程日志" actions={<Button className="text compact" onClick={() => void content.refreshDetails()}>重新拉取</Button>}><Logs page={content.logs} error={content.logsError} onRefresh={() => void content.refreshDetails()} onMore={() => { const cursor = content.logs?.next_cursor; if (cursor) void content.loadMoreLogs(cursor); }} /></Section></div>
     <TaskDetails run={run} />
   </div>{deleteOpen ? <ConfirmModal title="删除收集任务" detail="会同时删除任务绑定的资产池条目，且不可恢复。" confirmLabel="删除" danger busy={mutating} onClose={() => setDeleteOpen(false)} onConfirm={() => void remove()} /> : null}</section>;
 }

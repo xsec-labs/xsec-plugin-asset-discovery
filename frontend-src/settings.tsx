@@ -1,4 +1,4 @@
-import { Field, Input } from "@xsec/ui-react";
+import { Badge, Field, Input } from "@xsec/ui-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AssetDiscoveryApi } from "./host";
 import type { CollectorProvider, CollectorSettings } from "./types";
@@ -22,10 +22,6 @@ function draftFrom(settings: CollectorSettings): SettingsDraft {
     hunterSkillPath: settings.hunterSkillPath ?? "",
     fofaSkillPath: settings.fofaSkillPath ?? "",
   };
-}
-
-function configured(value: boolean): string {
-  return value ? "已配置（保存于系统密钥库）" : "未配置";
 }
 
 function normalizedDraft(draft: SettingsDraft): SettingsDraft {
@@ -177,7 +173,7 @@ function Credential({ name, kind, value, isConfigured, disabled, onChange, onSav
   onSave: (kind: CredentialKind) => void;
   onClear: (kind: CredentialKind) => void;
 }) {
-  return <Field label={name} hint={configured(isConfigured)}>{props => <div className="ad-credential"><Input {...props} type="password" autoComplete="new-password" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} /><Button className="compact" aria-label={`保存${name}`} disabled={disabled} onClick={() => onSave(kind)}>保存</Button><Button className="compact danger" aria-label={`清除${name}`} disabled={disabled} onClick={() => onClear(kind)}>清除</Button></div>}</Field>;
+  return <Field label={<span className="ad-credential-label">{name}<Badge tone={isConfigured ? "success" : "neutral"}>{isConfigured ? "已配置" : "未配置"}</Badge></span>}>{props => <div className="ad-credential"><Input {...props} type="password" autoComplete="new-password" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} /><Button className="compact" aria-label={`保存${name}`} disabled={disabled} onClick={() => onSave(kind)}>保存</Button><Button className="compact danger" aria-label={`清除${name}`} disabled={disabled} onClick={() => onClear(kind)}>清除</Button></div>}</Field>;
 }
 
 function CredentialFields({ settings, credentials, disabled, onChange, onSave, onClear }: {
@@ -205,14 +201,17 @@ export function SettingsPage({ api }: { api: AssetDiscoveryApi }) {
   if (reader.error && !reader.settings) return <div className="ad-app ad-settings"><div className="ad-error" role="alert"><p>{reader.error}</p><Button size="sm" disabled={reader.loading} onClick={() => void reader.load()}>重新读取</Button></div></div>;
   if (!reader.settings || !reader.draft) throw new Error("资产发现设置状态不完整");
   return <main className="ad-app ad-settings">
-    <p className="ad-eyebrow">ASSET DISCOVERY SETTINGS</p><h1 className="ad-title">资产发现</h1>
-    <p className="ad-description">配置默认数据源、API Host 和 Skill 路径。密钥仅由宿主系统密钥库存储。</p>
-    <div className="ad-runs">
-      <SettingsFields draft={reader.draft} disabled={settingsDisabled} onUpdate={reader.update} />
-      <CredentialFields settings={reader.settings} credentials={credentials.credentials} disabled={settingsDisabled} onChange={credentials.setCredential} onSave={(kind) => void credentials.save(kind)} onClear={credentials.setClearKind} />
-      <p className="ad-muted">当前 Skill 解析：Hunter {reader.settings.resolvedHunterSkillPath || "—"}；FOFA {reader.settings.resolvedFofaSkillPath || "—"}</p>
-      {reader.error ? <p className="ad-field-error" role="alert">{reader.error}</p> : null}{reader.notice ? <p className="ad-muted" role="status">{reader.notice}</p> : null}
-      <div className="ad-form-actions"><Button className="primary" loading={settingsSave.saving} disabled={saving || !reader.isSettingsReady} onClick={() => void settingsSave.save()}>保存设置</Button><Button disabled={saving || reader.loading} onClick={() => void reader.load()}>重新读取设置</Button></div>
+    <h1 className="ad-title">资产发现</h1>
+    <div className="ad-settings-groups">
+      <section className="ad-group" aria-labelledby="ad-settings-source"><h2 id="ad-settings-source">数据源</h2>
+        <SettingsFields draft={reader.draft} disabled={settingsDisabled} onUpdate={reader.update} />
+        <dl className="ad-resolved"><dt>Hunter Skill</dt><dd>{reader.settings.resolvedHunterSkillPath || "—"}</dd><dt>FOFA Skill</dt><dd>{reader.settings.resolvedFofaSkillPath || "—"}</dd></dl>
+        <div className="ad-form-actions"><Button className="primary" loading={settingsSave.saving} disabled={saving || !reader.isSettingsReady} onClick={() => void settingsSave.save()}>保存设置</Button><Button disabled={saving || reader.loading} onClick={() => void reader.load()}>重新读取设置</Button></div>
+      </section>
+      <section className="ad-group" aria-labelledby="ad-settings-keys"><h2 id="ad-settings-keys">API 密钥</h2>
+        <CredentialFields settings={reader.settings} credentials={credentials.credentials} disabled={settingsDisabled} onChange={credentials.setCredential} onSave={(kind) => void credentials.save(kind)} onClear={credentials.setClearKind} />
+      </section>
+      {reader.error ? <p className="ad-field-error" role="alert">{reader.error}</p> : null}{reader.notice ? <p className="ad-toast" role="status">{reader.notice}</p> : null}
     </div>
     {credentials.clearKind ? <ConfirmModal title="清除 API 密钥" detail="清除后新的收集任务将不能使用该密钥。" confirmLabel="清除" danger busy={saving} onClose={() => credentials.setClearKind(undefined)} onConfirm={() => void credentials.clear()} /> : null}
   </main>;
