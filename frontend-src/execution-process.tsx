@@ -66,7 +66,7 @@ function prunePendingKeys(pendingKeys: Set<string>, entries: StreamEntry[]): boo
 function ToolDisclosure({ tool }: { tool: ToolCall }) {
   const output = tool.content ?? tool.raw_output;
   const status = tool.status?.trim() || "进行中";
-  return <details className="ad-tool"><summary>{toolLabel(tool)} · {status}</summary>
+  return <details className="ad-tool"><summary><span className="ad-tool-name">{toolLabel(tool)}</span><span className="ad-tool-status">{status}</span></summary>
     {tool.raw_input !== undefined ? <ToolValue label="输入" value={tool.raw_input} /> : null}
     {output !== undefined ? <ToolValue label="结果" value={output} /> : null}
   </details>;
@@ -77,8 +77,8 @@ function ToolValue({ label, value }: { label: string; value: unknown }) {
 }
 
 function MessageEntry({ message }: { message: SessionMessage }) {
-  return <article className="ad-message"><header>Agent 执行过程</header>
-    {message.thought?.trim() ? <pre>{message.thought.trim()}</pre> : null}
+  return <article className="ad-message"><header className="ad-sr-only">Agent 执行过程</header>
+    {message.thought?.trim() ? <pre className="ad-thought">{message.thought.trim()}</pre> : null}
     {message.text?.trim() ? <pre>{message.text.trim()}</pre> : null}
   </article>;
 }
@@ -149,7 +149,7 @@ function ProcessStream({ entries, live, process }: {
       {entries.map((entry) => entry.kind === "tool"
         ? <ToolDisclosure key={entry.key} tool={entry.tool} />
         : <MessageEntry key={entry.key} message={entry.message} />)}
-      {live ? <p className="ad-process-live">实时更新中</p> : null}
+      {live ? <p className="ad-process-live ad-live">实时更新中</p> : null}
     </div>
     {process.pendingCount ? <Button className="compact ad-new-records" onClick={process.jumpToLatest}>有 {process.pendingCount} 条新执行记录，查看最新</Button> : null}
   </>;

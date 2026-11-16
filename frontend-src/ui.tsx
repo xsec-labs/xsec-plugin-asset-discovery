@@ -80,3 +80,24 @@ export function Section({ title, actions, children }: { title: string; actions?:
     </section>
   );
 }
+
+function Icon({ children }: { children: ReactNode }) {
+  return <svg className="ad-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>;
+}
+
+export function RefreshIcon() {
+  return <Icon><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /></Icon>;
+}
+
+export function PlusIcon() {
+  return <Icon><path d="M5 12h14" /><path d="M12 5v14" /></Icon>;
+}
+
+/** The mark of one collection stage: done, active, failed, skipped or pending. */
+export function StageMark({ state }: { state: string }) {
+  return <span className="ad-stage-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    {state === "done" ? <path d="M20 6 9 17l-5-5" /> : null}
+    {state === "failed" ? <><path d="M18 6 6 18" /><path d="m6 6 12 12" /></> : null}
+    {state === "skipped" ? <path d="M6 12h12" /> : null}
+  </svg></span>;
+}
