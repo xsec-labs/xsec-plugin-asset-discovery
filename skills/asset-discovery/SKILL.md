@@ -25,8 +25,8 @@ Change state:
 - `asset_discovery_run_start` - create a collection run for one authorized scope (`provider` `hunter` or `fofa`, `scope`, optional `name`). It launches a collector Agent that uses the user's provider credential and quota.
 - `asset_discovery_run_stop` - stop a run that is starting or running.
 - `asset_discovery_assets_import` - import pool assets (`assetIds`, at most 200) into a project (`projectId`). They become part of that project's assets.
-- `asset_discovery_run_delete` - delete a finished run's record. Irreversible; stop a running run first.
-- `asset_discovery_assets_delete` - delete assets from the pool. Irreversible; assets already imported into a project stay there.
+- `asset_discovery_run_delete` - delete a finished run **and every asset that run collected into the pool**. Irreversible, and those assets cost provider quota to collect; assets already imported into a project are not affected. Stop a running run first.
+- `asset_discovery_assets_delete` - delete the requested assets from the pool. Irreversible; assets already imported into a project stay there. The result's `requested` is how many ids you sent, not how many existed.
 
 Also available: `asset_hunter_query` and `asset_fofa_query` query one scope
 directly without creating a run or touching the pool, and
@@ -38,7 +38,8 @@ directly without creating a run or touching the pool, and
 2. `asset_discovery_run_start`, then poll `asset_discovery_run_get` with a pause between calls. A run is finished when its status is `done`, `failed` or `cancelled`; `failed` carries `failureCode` and `failureMessage`. Report a failed run as failed, do not treat a partial pool as a complete result.
 3. `asset_discovery_assets_list` with the run's `runId` to review what was found. Page with `offset`/`limit` instead of asking for everything at once.
 4. Import only assets that match the authorized scope: choose the project from `asset_discovery_projects_list`, then `asset_discovery_assets_import`. Check `created`, `skipped`, `failed` and `errors` in the answer.
-5. Delete only what the user asked to delete. Never delete or import in bulk on your own judgment.
+5. Delete only what the user asked to delete. Before `asset_discovery_run_delete`, call `asset_discovery_assets_list` with the run's `runId`, tell the user how many pool assets will go with it, and get their consent. Never delete or import in bulk on your own judgment.
 
-Credentials are never tool arguments or output fields. Start with small
+A `scope` takes one scope per line; text after `#` on a line is ignored and not
+passed to the collector. Credentials are never tool arguments or output fields. Start with small
 pages, and tell the user which tool calls changed state.
