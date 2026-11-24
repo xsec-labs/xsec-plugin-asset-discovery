@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 
 const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
 const NATIVE_PERMISSIONS = ["mcp.servers.register", "native.execute"];
-const MCP_SERVERS = ["asset-fofa", "asset-hunter", "asset-normalize"];
+const MCP_SERVERS = ["asset-fofa", "asset-hunter", "asset-normalize", "asset-pool"];
 const artifact = new URL("../com.xsec.desktop/frontend/index.js", import.meta.url);
 const manifestPath = new URL("../plugin.json", import.meta.url);
 const codexManifestPath = new URL("../.codex-plugin/plugin.json", import.meta.url);
